@@ -27,9 +27,9 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 10
 
-    loss_func = nn.MSELoss()
+    loss_func = nn.CrossEntropyLoss()
 
-    for step, (batch, _) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
+    for step, (batch, class_labels) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
         # assign learning rate & weight decay for each step
         it = start_steps + step  # global training iteration
         if lr_schedule_values is not None or wd_schedule_values is not None:
@@ -60,11 +60,11 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
                 images_patch = rearrange(unnorm_images, 'b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=patch_size, p2=patch_size)
 
             B, _, C = images_patch.shape
-            labels = images_patch[bool_masked_pos].reshape(B, -1, C)
+            # labels = images_patch[bool_masked_pos].reshape(B, -1, C)
 
         with torch.cuda.amp.autocast():
             outputs = model(images, bool_masked_pos)
-            loss = loss_func(input=outputs, target=labels)
+            loss = loss_func(input=outputs, target=class_labels)
 
         loss_value = loss.item()
 
