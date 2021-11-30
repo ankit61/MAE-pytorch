@@ -122,13 +122,14 @@ def get_args():
     return parser.parse_args()
 
 
-def get_model(args):
+def get_model(args, num_classes):
     print(f"Creating model: {args.model}")
     model = create_model(
         args.model,
         pretrained=False,
         drop_path_rate=args.drop_path,
         drop_block_rate=None,
+        num_classes=num_classes
     )
 
     return model
@@ -150,14 +151,14 @@ def main(args):
 
     cudnn.benchmark = True
 
-    model = get_model(args)
+    # get dataset
+    dataset_train, num_classes = build_pretraining_dataset(args)
+
+    model = get_model(args, num_classes)
     patch_size = model.encoder.patch_embed.patch_size
     print("Patch size = %s" % str(patch_size))
     args.window_size = (args.input_size // patch_size[0], args.input_size // patch_size[1])
     args.patch_size = patch_size
-
-    # get dataset
-    dataset_train = build_pretraining_dataset(args)
 
     if True:  # args.distributed:
         num_tasks = utils.get_world_size()
