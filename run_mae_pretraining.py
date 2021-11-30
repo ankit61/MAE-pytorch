@@ -86,7 +86,8 @@ def get_args():
                         help='Training interpolation (random, bilinear, bicubic default: "bicubic")')
 
     # Dataset parameters
-    parser.add_argument('--data_path', default='/grogu/user/spurushw/datasets/imagenet', type=str,
+    parser.add_argument('--data_set', default='CIFAR', type=str)
+    parser.add_argument('--data_path', default='./', type=str,
                         help='dataset path')
     parser.add_argument('--imagenet_default_mean_and_std', default=True, action='store_true')
 
