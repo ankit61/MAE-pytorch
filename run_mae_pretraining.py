@@ -25,6 +25,7 @@ from engine_for_pretraining import train_one_epoch
 from utils import NativeScalerWithGradNormCount as NativeScaler
 import utils
 import modeling_pretrain
+import wandb
 
 
 def get_args():
@@ -133,6 +134,7 @@ def get_model(args):
 
 
 def main(args):
+    wandb.init(project='masked-classifier', entity='ankit61', config=args.__dict__)
     utils.init_distributed_mode(args)
 
     print(args)
@@ -169,11 +171,7 @@ def main(args):
     else:
         sampler_train = torch.utils.data.RandomSampler(dataset_train)
 
-    if global_rank == 0 and args.log_dir is not None:
-        os.makedirs(args.log_dir, exist_ok=True)
-        log_writer = utils.TensorboardLogger(log_dir=args.log_dir)
-    else:
-        log_writer = None
+    log_writer = None    
 
     data_loader_train = torch.utils.data.DataLoader(
         dataset_train, sampler=sampler_train,
@@ -230,8 +228,7 @@ def main(args):
         train_stats = train_one_epoch(
             model, data_loader_train,
             optimizer, device, epoch, loss_scaler,
-            args.clip_grad, log_writer=log_writer,
-            start_steps=epoch * num_training_steps_per_epoch,
+            args.clip_grad, start_steps=epoch * num_training_steps_per_epoch,
             lr_schedule_values=lr_schedule_values,
             wd_schedule_values=wd_schedule_values,
             patch_size=patch_size[0],
