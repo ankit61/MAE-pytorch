@@ -43,6 +43,7 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
         images, bool_masked_pos = batch
         images = images.to(device, non_blocking=True)
         bool_masked_pos = bool_masked_pos.to(device, non_blocking=True).flatten(1).to(torch.bool)
+        class_labels = class_labels.to(device, non_blocking=True)
 
         # import pdb; pdb.set_trace()
         with torch.no_grad():
