@@ -100,15 +100,14 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
         metric_logger.update(weight_decay=weight_decay_value)
         metric_logger.update(grad_norm=grad_norm)
 
-        if log_writer is not None:
-            wandb.log({
-                'loss': loss_value,
-                'loss_scale': loss_scale_value,
-                'lr': max_lr,
-                'min_lr': min_lr,
-                'weight_decay': weight_decay_value,
-                'grad_norm': grad_norm
-            })
+        wandb.log({
+            'loss': loss_value,
+            'loss_scale': loss_scale_value,
+            'lr': max_lr,
+            'min_lr': min_lr,
+            'weight_decay': weight_decay_value,
+            'grad_norm': grad_norm
+        })
 
         if lr_scheduler is not None:
             lr_scheduler.step_update(start_steps + step)
