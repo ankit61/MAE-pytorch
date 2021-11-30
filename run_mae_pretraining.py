@@ -151,14 +151,16 @@ def main(args):
 
     cudnn.benchmark = True
 
-    # get dataset
-    dataset_train, num_classes = build_pretraining_dataset(args)
-
-    model = get_model(args, num_classes)
+    args.num_classes = 1000 if args.data_set == 'IMNET' else 100
+    model = get_model(args, args.num_classes)
     patch_size = model.encoder.patch_embed.patch_size
     print("Patch size = %s" % str(patch_size))
     args.window_size = (args.input_size // patch_size[0], args.input_size // patch_size[1])
     args.patch_size = patch_size
+
+    # get dataset
+    dataset_train, num_classes = build_pretraining_dataset(args)
+    assert args.num_classes == num_classes
 
     if True:  # args.distributed:
         num_tasks = utils.get_world_size()
