@@ -164,7 +164,7 @@ def main(args):
 
     dataset_val, _ = build_pretraining_dataset(args, is_train=False)
 
-    if True:  # args.distributed:
+    if args.distributed:
         num_tasks = utils.get_world_size()
         global_rank = utils.get_rank()
         sampler_rank = global_rank
@@ -181,6 +181,7 @@ def main(args):
     else:
         sampler_train = torch.utils.data.RandomSampler(dataset_train)
         sampler_val = torch.utils.data.RandomSampler(dataset_val)
+        num_training_steps_per_epoch = len(dataset_train) // args.batch_size
 
     log_writer = None
 
