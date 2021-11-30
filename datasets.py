@@ -48,13 +48,14 @@ class DataAugmentationForMAE(object):
         return repr
 
 
-def build_pretraining_dataset(args):
+def build_pretraining_dataset(args, is_train):
     transform = DataAugmentationForMAE(args)
     print("Data Aug = %s" % str(transform))
     if args.data_set == 'CIFAR':
-        return datasets.CIFAR100(args.data_path, transform=transform, download=True), 100
+        return datasets.CIFAR100(args.data_path, train=is_train, transform=transform, download=True), 100
     elif args.data_set == 'IMNET':
-        return ImageFolder(args.data_path, transform=transform), 1000
+        root = os.path.join(args.data_path, 'train' if is_train else 'val')
+        return ImageFolder(root, transform=transform), 1000
 
 
 def build_dataset(is_train, args):

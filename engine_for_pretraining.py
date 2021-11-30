@@ -101,12 +101,14 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
         metric_logger.update(grad_norm=grad_norm)
 
         wandb.log({
-            'loss': loss_value,
-            'loss_scale': loss_scale_value,
-            'lr': max_lr,
-            'min_lr': min_lr,
-            'weight_decay': weight_decay_value,
-            'grad_norm': grad_norm
+            'train_loss': loss_value,
+            'train_acc': get_acc(outputs, class_labels),
+            'train_loss_scale': loss_scale_value,
+            'train_lr': max_lr,
+            'train_min_lr': min_lr,
+            'train_weight_decay': weight_decay_value,
+            'train_grad_norm': grad_norm,
+            'train_epoch': epoch
         })
 
         if lr_scheduler is not None:
@@ -115,3 +117,43 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
+
+
+def validate_one_epoch(
+    model: torch.nn.Module,
+    data_loader: Iterable,
+    device: torch.device,
+    epoch
+):
+    model.eval()
+
+    loss_func = nn.CrossEntropyLoss()
+
+    for step, (batch, class_labels) in enumerate(data_loader):
+        images, bool_masked_pos = batch
+        images = images.to(device, non_blocking=True)
+        bool_masked_pos = bool_masked_pos.to(device, non_blocking=True).flatten(1).to(torch.bool)
+        class_labels = class_labels.to(device, non_blocking=True)
+
+        with torch.no_grad():
+            with torch.cuda.amp.autocast():
+                outputs = model(images, bool_masked_pos)
+                loss = loss_func(input=outputs, target=class_labels)
+
+        loss_value = loss.item()
+
+        if not math.isfinite(loss_value):
+            print("Loss is {}, stopping training".format(loss_value))
+            sys.exit(1)
+
+        torch.cuda.synchronize()
+
+        wandb.log({
+            'val_loss': loss_value,
+            'val_acc': get_acc(outputs, class_labels),
+            'val_epoch': epoch
+        })
+
+
+def get_acc(outputs, class_labels):
+    return (outputs.argmax(1) == class_labels).sum() / class_labels.shape[0]

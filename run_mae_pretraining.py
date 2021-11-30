@@ -21,7 +21,7 @@ from timm.models import create_model
 from optim_factory import create_optimizer
 
 from datasets import build_pretraining_dataset
-from engine_for_pretraining import train_one_epoch
+from engine_for_pretraining import train_one_epoch, validate_one_epoch
 from utils import NativeScalerWithGradNormCount as NativeScaler
 import utils
 import modeling_pretrain
@@ -159,8 +159,10 @@ def main(args):
     args.patch_size = patch_size
 
     # get dataset
-    dataset_train, num_classes = build_pretraining_dataset(args)
+    dataset_train, num_classes = build_pretraining_dataset(args, is_train=True)
     assert args.num_classes == num_classes
+
+    dataset_val, _ = build_pretraining_dataset(args, is_train=False)
 
     if True:  # args.distributed:
         num_tasks = utils.get_world_size()
@@ -171,14 +173,27 @@ def main(args):
         sampler_train = torch.utils.data.DistributedSampler(
             dataset_train, num_replicas=num_tasks, rank=sampler_rank, shuffle=True
         )
+        sampler_val = torch.utils.data.DistributedSampler(
+            dataset_val, num_replicas=num_tasks, rank=sampler_rank, shuffle=True
+        )
         print("Sampler_train = %s" % str(sampler_train))
+        print("Sampler_val = %s" % str(sampler_val))
     else:
         sampler_train = torch.utils.data.RandomSampler(dataset_train)
+        sampler_val = torch.utils.data.RandomSampler(dataset_val)
 
-    log_writer = None    
+    log_writer = None
 
     data_loader_train = torch.utils.data.DataLoader(
         dataset_train, sampler=sampler_train,
+        batch_size=args.batch_size,
+        num_workers=args.num_workers,
+        pin_memory=args.pin_mem,
+        drop_last=True,
+    )
+
+    data_loader_val = torch.utils.data.DataLoader(
+        dataset_val, sampler=sampler_val,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         pin_memory=args.pin_mem,
@@ -238,6 +253,7 @@ def main(args):
             patch_size=patch_size[0],
             normlize_target=args.normlize_target,
         )
+        validate_one_epoch(model, data_loader_val, device, epoch)
         if args.output_dir:
             if (epoch + 1) % args.save_ckpt_freq == 0 or epoch + 1 == args.epochs:
                 utils.save_model(
